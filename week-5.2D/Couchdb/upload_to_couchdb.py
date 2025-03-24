@@ -44,6 +44,6 @@ client.tls_set()  # Automatically sets SSL for secure connection
 client.on_connect = on_connect
 client.on_message = on_message
 
-print("🔄 Connecting to MQTT...")
+print(" Connecting to MQTT...")
 client.connect(BROKER, PORT, 60)
 client.loop_forever()
