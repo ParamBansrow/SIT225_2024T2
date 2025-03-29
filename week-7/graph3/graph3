@@ -1,0 +1,83 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+# Step 1: Load data from CSV
+file_path = "sensor_data.csv"  
+
+try:
+    data = pd.read_csv(file_path)
+    print("Data loaded successfully.")
+except FileNotFoundError:
+    print(f"Error: File '{file_path}' not found.")
+    exit()
+
+# Display the first few rows
+print(data.head())
+
+# Standardize column names
+data.columns = data.columns.str.strip().str.lower()
+data.rename(columns={"temperature (c)": "temperature", "humidity (%)": "humidity"}, inplace=True)
+
+# Check if required columns exist
+required_columns = {'temperature', 'humidity'}
+if not required_columns.issubset(data.columns):
+    print(f"Error: CSV file must contain {required_columns} columns.")
+    print("Found columns:", data.columns)
+    exit()
+
+# Reshape the data for sklearn
+X = data['temperature'].values.reshape(-1, 1)
+Y = data['humidity'].values
+
+# Step 2: Train Linear Regression Model
+model = LinearRegression()
+model.fit(X, Y)
+
+# Step 3: Generate test data and make predictions
+temperatures_test = np.linspace(X.min(), X.max(), 100)
+humidity_test_pred = model.predict(temperatures_test.reshape(-1, 1))
+
+# Step 4: Plot training data and trend line from test samples
+plt.figure(figsize=(10, 6))
+plt.scatter(X, Y, color="blue", label="Training Data")
+plt.plot(temperatures_test, humidity_test_pred, color="red", label="Trend Line (Test)")
+plt.title("Linear Regression Trend Line")
+plt.xlabel("Temperature (C)")
+plt.ylabel("Humidity (%)")
+plt.legend()
+plt.show()
+
+# Step 5: Filter outliers (filter by residuals)
+residuals = Y - model.predict(X)
+threshold = 10  
+filtered_indices = np.abs(residuals) < threshold
+temperatures_train_filtered = X[filtered_indices].flatten()
+humidity_train_filtered = Y[filtered_indices]
+
+# Retrain the model with filtered data
+model_filtered = LinearRegression()
+model_filtered.fit(temperatures_train_filtered.reshape(-1, 1), humidity_train_filtered)
+
+# Predict again with the filtered model
+humidity_test_pred_filtered = model_filtered.predict(temperatures_test.reshape(-1, 1))
+
+# Plot training data (filtered), trend lines, and compare
+plt.figure(figsize=(10, 6))
+plt.scatter(X, Y, color="blue", alpha=0.5, label="Original Training Data")
+plt.scatter(temperatures_train_filtered, humidity_train_filtered, color="green", label="Filtered Training Data")
+plt.plot(temperatures_test, humidity_test_pred, color="red", label="Trend Line (Original)")
+plt.plot(temperatures_test, humidity_test_pred_filtered, color="orange", label="Trend Line (Filtered)")
+plt.title("Comparison of Trend Lines Before and After Outlier Removal")
+plt.xlabel("Temperature (C)")
+plt.ylabel("Humidity (%)")
+plt.legend()
+plt.show()
+
+# Compare slopes and intercepts
+print("Original Model Coefficients:")
+print(f"Slope: {model.coef_[0]:.2f}, Intercept: {model.intercept_:.2f}")
+print("Filtered Model Coefficients:")
+print(f"Slope: {model_filtered.coef_[0]:.2f}, Intercept: {model_filtered.intercept_:.2f}")
